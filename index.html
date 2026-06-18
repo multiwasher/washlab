@@ -1425,7 +1425,6 @@
                 app: 'washlab',
                 id: sanitizeQrValue(card.id),
                 zona: sanitizeQrValue(card.zone),
-                estado: sanitizeQrValue(statusInfo.label),
                 cliente: sanitizeQrValue(data.clienteNome),
                 comercial: sanitizeQrValue(data.comercial),
                 pais: sanitizeQrValue(data.pais || data.morada),
@@ -1442,7 +1441,6 @@
                 'WashLAB Card',
                 `ID: ${payload.id}`,
                 `Zona: ${payload.zona}`,
-                `Estado: ${payload.estado}`,
                 `Cliente: ${payload.cliente}`,
                 `Comercial: ${payload.comercial}`,
                 `Pais: ${payload.pais}`,
@@ -1488,7 +1486,6 @@
             const details = [
                 { label: 'ID', value: payload.id },
                 { label: 'Zona', value: payload.zona },
-                /*{ label: 'Estado', value: payload.estado },*/
                 { label: 'Cliente', value: payload.cliente },
                 { label: 'Comercial', value: payload.comercial },
                 { label: 'Pais', value: payload.pais },
