@@ -1377,6 +1377,16 @@
             return `<img src="https://flagcdn.com/w80/${code.toLowerCase()}.png" alt="${safeValue}" class="card-info-flag" title="${safeValue}">`;
         }
 
+        function getCountryFlagUrl(country) {
+            const value = String(country || '').trim();
+            if (!value) return '';
+
+            const code = getCountryCode(value);
+            if (!code) return '';
+
+            return `https://flagcdn.com/w160/${code.toLowerCase()}.png`;
+        }
+
         function sanitizeQrValue(value) {
             return String(value || '-')
                 .replace(/\s+/g, ' ')
@@ -1536,7 +1546,17 @@
                 .toLowerCase() || 'sem_nome';
         }
 
-        function generatePrintableQrDataUrl(card, qrSize = 700) {
+        function loadImageWithCors(url) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = () => resolve(img);
+                img.onerror = () => reject(new Error('flag_load_failed'));
+                img.src = url;
+            });
+        }
+
+        async function generatePrintableQrDataUrl(card, qrSize = 700) {
             if (!card || typeof QRious !== 'function') return '';
 
             try {
@@ -1573,6 +1593,28 @@
                 ctx.font = '600 30px Segoe UI, Arial, sans-serif';
                 ctx.fillText(clientName, outCanvas.width / 2, padding + 88);
 
+                const flagUrl = getCountryFlagUrl(card?.data?.pais || card?.data?.morada || '');
+                if (flagUrl) {
+                    try {
+                        const flagImg = await loadImageWithCors(flagUrl);
+                        const flagWidth = 108;
+                        const flagHeight = 74;
+                        const flagX = outCanvas.width - padding - flagWidth;
+                        const flagY = padding + 8;
+
+                        ctx.save();
+                        ctx.shadowColor = 'rgba(0,0,0,0.2)';
+                        ctx.shadowBlur = 8;
+                        ctx.shadowOffsetY = 2;
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fillRect(flagX - 2, flagY - 2, flagWidth + 4, flagHeight + 4);
+                        ctx.drawImage(flagImg, flagX, flagY, flagWidth, flagHeight);
+                        ctx.restore();
+                    } catch (err) {
+                        // Keep QR export working even if flag loading fails.
+                    }
+                }
+
                 ctx.strokeStyle = '#d9d9d9';
                 ctx.lineWidth = 2;
                 ctx.strokeRect(padding - 1, padding + headerHeight - 1, qrSize + 2, qrSize + 2);
@@ -1599,11 +1641,12 @@
             }
         }
 
-        function downloadCardQr(cardId) {
+        async function downloadCardQr(cardId) {
             const card = findCard(cardId);
             if (!card) return;
 
-            const qrDataUrl = generatePrintableQrDataUrl(card, 700) || generateCardQrDataUrl(card, 700);
+            const printableQrDataUrl = await generatePrintableQrDataUrl(card, 700);
+            const qrDataUrl = printableQrDataUrl || generateCardQrDataUrl(card, 700);
             if (!qrDataUrl) {
                 alert('Nao foi possivel gerar o QR code deste card.');
                 return;
