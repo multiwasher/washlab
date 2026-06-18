@@ -322,6 +322,29 @@
             align-items: flex-start;
         }
 
+        .card-corner-delete {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            width: 28px;
+            height: 28px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(231, 77, 60, 0);
+            color: #ff9a9a;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 3;
+            transition: all 0.2s ease;
+        }
+
+        .card-corner-delete:hover {
+            background: rgba(231, 76, 60, 0.35);
+            transform: translateY(-1px);
+        }
+
         .card:hover {
             transform: translateX(5px);
             box-shadow: 0 5px 20px rgba(0,0,0,0.3);
@@ -358,6 +381,10 @@
         .card-body {
             flex: 1;
             min-width: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 180px;
+            position: relative;
         }
 
         .card-header-mini {
@@ -393,8 +420,24 @@
         .card-info-mini {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 4px;
+            gap: 10px;
             font-size: 0.8rem;
+        }
+
+        .card-info-column {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            min-width: 0;
+        }
+
+        .card-info-column-right {
+            align-items: flex-start;
+        }
+
+        .card-info-column-right .card-info-item {
+            align-items: flex-start;
+            text-align: left;
         }
 
         .card-info-item {
@@ -416,10 +459,49 @@
             text-overflow: ellipsis;
         }
 
+        .card-info-item.flag-item .card-info-label {
+            display: none;
+        }
+
+        .card-info-item.flag-item .card-info-value {
+            white-space: normal;
+            overflow: visible;
+            text-overflow: clip;
+            margin-top: 2px;
+        }
+
+        .card-info-flag {
+            display: block;
+            width: 84px;
+            height: 58px;
+            border-radius: 6px;
+            object-fit: cover;
+            box-shadow: 0 0 0 1px rgba(255,255,255,0.2), 0 6px 14px rgba(0,0,0,0.3);
+        }
+
+        .country-inline {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            min-width: 0;
+            max-width: 100%;
+        }
+
+        .country-name {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
         .card-actions {
             display: flex;
             gap: 6px;
             margin-top: 6px;
+        }
+
+        .card-footer {
+            margin-top: auto;
+            padding-top: 10px;
         }
 
         .card-action-btn {
@@ -993,7 +1075,15 @@
                         normalized[zone][sub] = [];
                     }
                     if (Array.isArray(cards)) {
-                        normalized[zone][sub].push(...cards);
+                        normalized[zone][sub].push(...cards.map(card => ({
+                            ...card,
+                            data: card && card.data
+                                ? {
+                                    ...card.data,
+                                    pais: card.data.pais || card.data.morada || ''
+                                }
+                                : card.data
+                        })));
                     }
                 });
             });
@@ -1038,6 +1128,188 @@
             const month = String(date.getMonth() + 1).padStart(2, '0');
             const year = date.getFullYear();
             return `${day}/${month}/${year}`;
+        }
+
+        function normalizeCountryName(country) {
+            return String(country || '')
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/[.,/()-]+/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim()
+                .toLowerCase();
+        }
+
+        function getCountryCode(country) {
+            const normalized = normalizeCountryName(country);
+            if (!normalized) return '';
+
+            const countryCodes = {
+                portugal: 'PT',
+                portugues: 'PT',
+                espanha: 'ES',
+                espana: 'ES',
+                spain: 'ES',
+                franca: 'FR',
+                france: 'FR',
+                alemanha: 'DE',
+                germany: 'DE',
+                italia: 'IT',
+                italy: 'IT',
+                austria: 'AT',
+                belgica: 'BE',
+                belgium: 'BE',
+                bulgaria: 'BG',
+                croacia: 'HR',
+                croatia: 'HR',
+                chipre: 'CY',
+                cyprus: 'CY',
+                chequia: 'CZ',
+                'republica checa': 'CZ',
+                'czech republic': 'CZ',
+                dinamarca: 'DK',
+                denmark: 'DK',
+                eslovaquia: 'SK',
+                slovakia: 'SK',
+                eslovenia: 'SI',
+                slovenia: 'SI',
+                estonia: 'EE',
+                finlandia: 'FI',
+                finland: 'FI',
+                grecia: 'GR',
+                greece: 'GR',
+                hungria: 'HU',
+                hungary: 'HU',
+                islandia: 'IS',
+                iceland: 'IS',
+                letonia: 'LV',
+                latvia: 'LV',
+                lituania: 'LT',
+                lithuania: 'LT',
+                luxemburgo: 'LU',
+                luxembourg: 'LU',
+                malta: 'MT',
+                noruega: 'NO',
+                norway: 'NO',
+                polonia: 'PL',
+                poland: 'PL',
+                romenia: 'RO',
+                romania: 'RO',
+                suecia: 'SE',
+                sweden: 'SE',
+                suica: 'CH',
+                switzerland: 'CH',
+                turquia: 'TR',
+                turkey: 'TR',
+                ucrania: 'UA',
+                ukraine: 'UA',
+                russia: 'RU',
+                rusia: 'RU',
+                'russia federation': 'RU',
+                russiafederation: 'RU',
+                russiafederacao: 'RU',
+                russa: 'RU',
+                'reino unido': 'GB',
+                'gra bretanha': 'GB',
+                'great britain': 'GB',
+                'united kingdom': 'GB',
+                uk: 'GB',
+                england: 'GB',
+                inglaterra: 'GB',
+                escocia: 'GB',
+                scotland: 'GB',
+                'pais de gales': 'GB',
+                wales: 'GB',
+                ireland: 'IE',
+                irlanda: 'IE',
+                holanda: 'NL',
+                netherlands: 'NL',
+                'paises baixos': 'NL',
+                nederland: 'NL',
+                'the netherlands': 'NL',
+                marrocos: 'MA',
+                morocco: 'MA',
+                argelia: 'DZ',
+                algeria: 'DZ',
+                tunisia: 'TN',
+                tunis: 'TN',
+                egito: 'EG',
+                egypt: 'EG',
+                'africa do sul': 'ZA',
+                'south africa': 'ZA',
+                brasil: 'BR',
+                brazil: 'BR',
+                angola: 'AO',
+                'cabo verde': 'CV',
+                capeverde: 'CV',
+                'costa do marfim': 'CI',
+                'ivory coast': 'CI',
+                'guine bissau': 'GW',
+                'guinea bissau': 'GW',
+                mocambique: 'MZ',
+                mozambique: 'MZ',
+                'sao tome e principe': 'ST',
+                'sao tome': 'ST',
+                'guine equatorial': 'GQ',
+                'equatorial guinea': 'GQ',
+                usa: 'US',
+                eua: 'US',
+                'estados unidos': 'US',
+                'united states': 'US',
+                'united states of america': 'US',
+                canada: 'CA',
+                mexico: 'MX',
+                mexique: 'MX',
+                argentina: 'AR',
+                chile: 'CL',
+                colombia: 'CO',
+                peru: 'PE',
+                venezuela: 'VE',
+                china: 'CN',
+                japao: 'JP',
+                japan: 'JP',
+                india: 'IN',
+                'coreia do sul': 'KR',
+                'south korea': 'KR',
+                korea: 'KR',
+                australia: 'AU',
+                'nova zelandia': 'NZ',
+                'new zealand': 'NZ',
+                'emirados arabes unidos': 'AE',
+                'united arab emirates': 'AE',
+                'arabia saudita': 'SA',
+                'saudi arabia': 'SA'
+            };
+
+            return countryCodes[normalized] || '';
+        }
+
+        function escapeHtml(value) {
+            return String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function formatCountryWithFlag(country) {
+            const value = String(country || '').trim();
+            if (!value) return '-';
+
+            const safeValue = escapeHtml(value);
+            return `<span class="country-inline"><span class="country-name">${safeValue}</span></span>`;
+        }
+
+        function renderInfoFlag(country) {
+            const value = String(country || '').trim();
+            if (!value) return '';
+
+            const code = getCountryCode(value);
+            if (!code) return '';
+
+            const safeValue = escapeHtml(value);
+            return `<img src="https://flagcdn.com/w80/${code.toLowerCase()}.png" alt="${safeValue}" class="card-info-flag" title="${safeValue}">`;
         }
 
         // ===================== RENDER DASHBOARD =====================
@@ -1085,13 +1357,19 @@
 
         function renderCard(card) {
             const statusInfo = STATUSES[card.status] || STATUSES['nao-testado'];
+            const countryValue = card.data.pais || card.data.morada || '';
+            const infoFlag = renderInfoFlag(countryValue);
 
-            // Mini info: Comercial, Cliente, Morada, Procedimento (VAT e Observações REMOVIDOS)
-            const miniInfo = [
+            // Mini info em duas colunas: esquerda (Comercial, Cliente, País) e direita (Procedimento)
+            const miniInfoLeft = [
                 { label: 'Comercial', value: card.data.comercial || '-' },
                 { label: 'Cliente', value: card.data.clienteNome || '-' },
-                { label: 'Morada', value: card.data.morada || '-' },
-                { label: 'Procedimento', value: card.data.procedimento || '-' }
+                { label: 'País', value: formatCountryWithFlag(countryValue) }
+            ];
+
+            const miniInfoRight = [
+                { label: 'Procedimento', value: card.data.procedimento || '-' },
+                { label: '', value: infoFlag, isHtml: true, className: 'flag-item' }
             ];
 
             const thumbnailHtml = card.thumbnail 
@@ -1100,6 +1378,7 @@
 
             return `
                 <div class="card ${statusInfo.class}" data-id="${card.id}" onclick="openCard('${card.id}')">
+                    <button type="button" class="card-corner-delete" onclick="event.stopPropagation(); deleteCard('${card.id}')" title="Eliminar card">🗑</button>
                     ${thumbnailHtml}
                     <div class="card-body">
                         <div class="card-header-mini">
@@ -1107,21 +1386,32 @@
                             <div class="card-status-badge">${statusInfo.label}</div>
                         </div>
                         <div class="card-info-mini">
-                            ${miniInfo.map(item => `
-                                <div class="card-info-item">
-                                    <span class="card-info-label">${item.label}</span>
-                                    <span class="card-info-value">${truncate(item.value, 18)}</span>
-                                </div>
-                            `).join('')}
-                        </div>
-                        <div class="card-actions" onclick="event.stopPropagation()">
-                            <button class="card-action-btn btn-image" onclick="triggerImageUpload('${card.id}')">📷 Imagem</button>
-                            <button class="card-action-btn btn-move" onclick="showMoveMenu('${card.id}', this)">📦 Mover</button>
-                            <button class="card-action-btn btn-delete" onclick="deleteCard('${card.id}')">🗑️</button>
-                            <div class="move-menu" id="move-menu-${card.id}">
-                                ${ZONES.map(z => `
-                                    ${z !== card.zone ? `<button onclick="moveCard('${card.id}', '${z}')">Zona ${z}</button>` : ''}
+                            <div class="card-info-column">
+                                ${miniInfoLeft.map(item => `
+                                    <div class="card-info-item">
+                                        <span class="card-info-label">${item.label}</span>
+                                        <span class="card-info-value">${item.label === 'País' ? item.value : truncate(item.value, 18)}</span>
+                                    </div>
                                 `).join('')}
+                            </div>
+                            <div class="card-info-column card-info-column-right">
+                                ${miniInfoRight.map(item => `
+                                    <div class="card-info-item ${item.className || ''}">
+                                        <span class="card-info-label">${item.label}</span>
+                                        <span class="card-info-value">${item.isHtml ? (item.value || '') : truncate(item.value, 18)}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        <div class="card-footer">
+                            <div class="card-actions" onclick="event.stopPropagation()">
+                                <!--<button class="card-action-btn btn-image" onclick="triggerImageUpload('${card.id}')">📷 Imagem</button>
+                                <button class="card-action-btn btn-move" onclick="showMoveMenu('${card.id}', this)">📦 Mover</button>-->
+                                <div class="move-menu" id="move-menu-${card.id}">
+                                    ${ZONES.map(z => `
+                                        ${z !== card.zone ? `<button onclick="moveCard('${card.id}', '${z}')">Zona ${z}</button>` : ''}
+                                    `).join('')}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1180,6 +1470,7 @@
         function openCard(id) {
             const card = findCard(id);
             if (!card) return;
+            const countryValue = card.data.pais || card.data.morada || '';
 
             currentCardId = id;
             const modal = document.getElementById('modalOverlay');
@@ -1210,7 +1501,7 @@
                     title: '2. Dados do Cliente/Revendedor',
                     rows: [
                         { label: 'Nome Cliente/Revendedor', value: card.data.clienteNome },
-                        { label: 'Morada', value: card.data.morada },
+                        { label: 'País', value: formatCountryWithFlag(countryValue) },
                         { label: 'Nº. VAT', value: card.data.vat }
                     ]
                 },
@@ -1486,7 +1777,7 @@
                     // ALL cell mappings as specified by user:
                     // B4  (index 3):  Nome Comercial Responsável
                     // B6  (index 5):  Nome Cliente/Revendedor
-                    // B7  (index 6):  Morada
+                    // B7  (index 6):  País
                     // B8  (index 7):  Nº. VAT
                     // B10 (index 9):  Procedimento (Live Demo / Testes Internos / Estudo)
                     // B11 (index 10): Idioma
@@ -1505,7 +1796,7 @@
                     const parsedData = {
                         comercial: getCell(3),           // B4
                         clienteNome: getCell(5),          // B6
-                        morada: getCell(6),               // B7
+                        pais: getCell(6),                 // B7
                         vat: getCell(7),                  // B8
                         procedimento: getCell(9),         // B10
                         idioma: getCell(10),              // B11
@@ -1565,7 +1856,7 @@
             const demoData = {
                 comercial: 'David Borges',
                 clienteNome: 'Grzibky / Inoxvalley',
-                morada: 'Rússia',
+                pais: 'Rússia',
                 vat: '123789456',
                 procedimento: 'Testes Internos',
                 idioma: 'PT',
@@ -1594,7 +1885,7 @@
 
             dashboardData['A'][getZoneSubSections('A')[0] || DEFAULT_SUB_SECTIONS[0]].push(demoCard);
 
-            const demoData2 = { ...demoData, clienteNome: 'Cliente Demo B', morada: 'Portugal', procedimento: 'Testes Internos', comercial: 'Ana Silva', limpezaSecagem: 'Limpeza', dataRegisto: '15/06/2026', previsaoConclusao: '20/06/2026' };
+            const demoData2 = { ...demoData, clienteNome: 'Cliente Demo B', pais: 'Portugal', procedimento: 'Testes Internos', comercial: 'Ana Silva', limpezaSecagem: 'Limpeza', dataRegisto: '15/06/2026', previsaoConclusao: '20/06/2026' };
             dashboardData['B'][getZoneSubSections('B')[0] || DEFAULT_SUB_SECTIONS[0]].push({
                 id: 'demo2_' + Date.now(),
                 zone: 'B',
@@ -1605,7 +1896,7 @@
                 createdAt: new Date().toISOString()
             });
 
-            const demoData3 = { ...demoData, clienteNome: 'Cliente Demo C', morada: 'Espanha', procedimento: 'Estudo', comercial: 'Pedro Santos', limpezaSecagem: '', dataRegisto: '01/06/2026', previsaoConclusao: '05/06/2026' };
+            const demoData3 = { ...demoData, clienteNome: 'Cliente Demo C', pais: 'Espanha', procedimento: 'Estudo', comercial: 'Pedro Santos', limpezaSecagem: '', dataRegisto: '01/06/2026', previsaoConclusao: '05/06/2026' };
             dashboardData['C'][getZoneSubSections('C')[0] || DEFAULT_SUB_SECTIONS[0]].push({
                 id: 'demo3_' + Date.now(),
                 zone: 'C',
