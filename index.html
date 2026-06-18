@@ -2002,11 +2002,31 @@
         function changeStatus(newStatus) {
             if (!currentCardId) return;
             const card = findCard(currentCardId);
-            if (card) {
-                card.status = newStatus;
-                saveToStorage();
-                renderDashboard();
-                openCard(currentCardId);
+            if (!card) return;
+
+            card.status = newStatus;
+            saveToStorage();
+            renderDashboard();
+
+            // Update status buttons in-place without re-rendering the modal
+            const statusClasses = {
+                'nao-testado': 'active-nao-testado',
+                'em-teste': 'active-em-teste',
+                'testado': 'active-testado'
+            };
+            const statusOrder = ['nao-testado', 'em-teste', 'testado'];
+            document.querySelectorAll('.status-btn').forEach((btn, i) => {
+                btn.className = 'status-btn';
+                if (statusOrder[i] === newStatus) {
+                    btn.classList.add(statusClasses[newStatus]);
+                }
+            });
+
+            // Regenerate QR with updated status
+            const newQrDataUrl = generateCardQrDataUrl(card, 240);
+            const qrImg = document.querySelector('.qr-preview img');
+            if (qrImg && newQrDataUrl) {
+                qrImg.src = newQrDataUrl;
             }
         }
 
