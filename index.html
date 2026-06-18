@@ -733,6 +733,66 @@
             border: 1px solid rgba(255,255,255,0.05);
         }
 
+        .qr-section {
+            margin-top: 20px;
+            padding: 20px;
+            background: var(--glass);
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.05);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .qr-section h3 {
+            color: var(--accent);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+            text-align: center;
+        }
+
+        .qr-preview {
+            width: 220px;
+            max-width: 100%;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.25);
+            background: #ffffff;
+            padding: 10px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+        }
+
+        .qr-preview img {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+
+        .qr-helper {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        .qr-download-btn {
+            border: none;
+            border-radius: 8px;
+            padding: 10px 16px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            cursor: pointer;
+            color: white;
+            background: linear-gradient(135deg, #16a085, #2ecc71);
+            transition: transform 0.2s ease, filter 0.2s ease;
+        }
+
+        .qr-download-btn:hover {
+            transform: translateY(-1px);
+            filter: brightness(1.06);
+        }
+
         .image-upload-section h3 {
             color: var(--accent);
             font-size: 0.9rem;
@@ -966,6 +1026,7 @@
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <script>
         // ===================== DATA STRUCTURE =====================
         const ZONES = ['A', 'B', 'C', 'D'];
@@ -984,6 +1045,10 @@
 
         // ===================== INITIALIZATION =====================
         document.addEventListener('DOMContentLoaded', () => {
+            if (renderQrInfoFromUrlIfPresent()) {
+                return;
+            }
+
             loadFromStorage();
             normalizeDashboardData();
             renderDashboard();
@@ -1312,6 +1377,176 @@
             return `<img src="https://flagcdn.com/w80/${code.toLowerCase()}.png" alt="${safeValue}" class="card-info-flag" title="${safeValue}">`;
         }
 
+        function sanitizeQrValue(value) {
+            return String(value || '-')
+                .replace(/\s+/g, ' ')
+                .replace(/[|]/g, '/')
+                .trim();
+        }
+
+        function encodeBase64Utf8(value) {
+            try {
+                const bytes = new TextEncoder().encode(String(value || ''));
+                let binary = '';
+                bytes.forEach(byte => {
+                    binary += String.fromCharCode(byte);
+                });
+                return btoa(binary);
+            } catch (err) {
+                return '';
+            }
+        }
+
+        function decodeBase64Utf8(value) {
+            try {
+                const binary = atob(String(value || ''));
+                const bytes = Uint8Array.from(binary, char => char.charCodeAt(0));
+                return new TextDecoder().decode(bytes);
+            } catch (err) {
+                return '';
+            }
+        }
+
+        function buildCardQrObject(card) {
+            const data = card.data || {};
+            const statusInfo = STATUSES[card.status] || STATUSES['nao-testado'];
+
+            return {
+                app: 'washlab',
+                id: sanitizeQrValue(card.id),
+                zona: sanitizeQrValue(card.zone),
+                estado: sanitizeQrValue(statusInfo.label),
+                cliente: sanitizeQrValue(data.clienteNome),
+                comercial: sanitizeQrValue(data.comercial),
+                pais: sanitizeQrValue(data.pais || data.morada),
+                procedimento: sanitizeQrValue(data.procedimento),
+                vat: sanitizeQrValue(data.vat),
+                registo: sanitizeQrValue(data.dataRegisto),
+                conclusao: sanitizeQrValue(data.previsaoConclusao)
+            };
+        }
+
+        function buildCardQrFallbackText(card) {
+            const payload = buildCardQrObject(card);
+            return [
+                'WashLAB Card',
+                `ID: ${payload.id}`,
+                `Zona: ${payload.zona}`,
+                `Estado: ${payload.estado}`,
+                `Cliente: ${payload.cliente}`,
+                `Comercial: ${payload.comercial}`,
+                `Pais: ${payload.pais}`,
+                `Procedimento: ${payload.procedimento}`,
+                `VAT: ${payload.vat}`,
+                `Registo: ${payload.registo}`,
+                `Conclusao: ${payload.conclusao}`
+            ].join('\n');
+        }
+
+        function buildCardQrPayload(card) {
+            // If app is served over HTTP(S), QR points to this page with encoded payload,
+            // allowing scanners to open a readable card view directly.
+            if (location.protocol === 'http:' || location.protocol === 'https:') {
+                const json = JSON.stringify(buildCardQrObject(card));
+                const encoded = encodeBase64Utf8(json);
+                if (encoded) {
+                    return `${location.origin}${location.pathname}?qr=${encodeURIComponent(encoded)}`;
+                }
+            }
+
+            // Fallback for file:// usage where phones cannot access local URLs.
+            return buildCardQrFallbackText(card);
+        }
+
+        function renderQrInfoFromUrlIfPresent() {
+            const params = new URLSearchParams(window.location.search);
+            const qrParam = params.get('qr');
+            if (!qrParam) return false;
+
+            const decodedJson = decodeBase64Utf8(qrParam);
+            if (!decodedJson) return false;
+
+            let payload;
+            try {
+                payload = JSON.parse(decodedJson);
+            } catch (err) {
+                return false;
+            }
+
+            if (!payload || payload.app !== 'washlab') return false;
+
+            const details = [
+                { label: 'ID', value: payload.id },
+                { label: 'Zona', value: payload.zona },
+                { label: 'Estado', value: payload.estado },
+                { label: 'Cliente', value: payload.cliente },
+                { label: 'Comercial', value: payload.comercial },
+                { label: 'Pais', value: payload.pais },
+                { label: 'Procedimento', value: payload.procedimento },
+                { label: 'VAT', value: payload.vat },
+                { label: 'Data de Registo', value: payload.registo },
+                { label: 'Previsao de Conclusao', value: payload.conclusao }
+            ];
+
+            document.body.innerHTML = `
+                <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:radial-gradient(circle at center, rgba(81, 184, 234, 1) 0%, rgba(0, 0, 0, 1) 100%);font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;color:#eaeaea;">
+                    <div style="width:100%;max-width:680px;background:#16213e;border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:20px;box-shadow:0 12px 30px rgba(0,0,0,0.35);">
+                        <h1 style="margin:0 0 6px 0;font-size:1.4rem;">WashLAB · Info do Card</h1>
+                        <p style="margin:0 0 18px 0;color:#a0a0a0;font-size:0.9rem;">Dados lidos via QR Code</p>
+                        <div style="display:grid;grid-template-columns:1fr;gap:8px;">
+                            ${details.map(item => `
+                                <div style="display:flex;justify-content:space-between;gap:12px;padding:10px 12px;border-radius:8px;background:rgba(255,255,255,0.05);">
+                                    <span style="color:#a0a0a0;font-size:0.85rem;">${escapeHtml(item.label)}</span>
+                                    <span style="text-align:right;font-weight:600;">${escapeHtml(item.value || '-')}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            return true;
+        }
+
+        function generateCardQrDataUrl(card, size = 220) {
+            if (!card || typeof QRious !== 'function') return '';
+
+            try {
+                const qr = new QRious({
+                    value: buildCardQrPayload(card),
+                    size,
+                    level: 'L',
+                    background: 'white',
+                    foreground: 'black'
+                });
+                return qr.toDataURL();
+            } catch (err) {
+                console.error('Erro ao gerar QR code:', err);
+                return '';
+            }
+        }
+
+        function downloadCardQr(cardId) {
+            const card = findCard(cardId);
+            if (!card) return;
+
+            const qrDataUrl = generateCardQrDataUrl(card, 700);
+            if (!qrDataUrl) {
+                alert('Nao foi possivel gerar o QR code deste card.');
+                return;
+            }
+
+            const a = document.createElement('a');
+            a.href = qrDataUrl;
+            a.download = `qr_${card.id}.png`;
+            a.click();
+        }
+
+        function downloadCurrentCardQr() {
+            if (!currentCardId) return;
+            downloadCardQr(currentCardId);
+        }
+
         // ===================== RENDER DASHBOARD =====================
         function renderDashboard() {
             const container = document.getElementById('zonesContainer');
@@ -1471,6 +1706,7 @@
             const card = findCard(id);
             if (!card) return;
             const countryValue = card.data.pais || card.data.morada || '';
+            const qrDataUrl = generateCardQrDataUrl(card, 240);
 
             currentCardId = id;
             const modal = document.getElementById('modalOverlay');
@@ -1489,6 +1725,16 @@
                     </div>
                 `).join('')
                 : '<p style="color: var(--text-secondary); text-align: center; grid-column: 1/-1;">Nenhuma imagem carregada</p>';
+
+            const qrHtml = qrDataUrl
+                ? `
+                    <div class="qr-preview">
+                        <img src="${qrDataUrl}" alt="QR code do card">
+                    </div>
+                    <button class="qr-download-btn" onclick="downloadCurrentCardQr()">⬇ Descarregar QR</button>
+                    <div class="qr-helper">Ao ler o QR, abre uma pagina com os dados essenciais do card.</div>
+                `
+                : '<div class="qr-helper">Nao foi possivel gerar o QR code para este card.</div>';
 
             const sections = [
                 {
@@ -1563,6 +1809,11 @@
                             `).join('')}
                         </div>
                     `).join('')}
+                </div>
+
+                <div class="qr-section">
+                    <h3>QR Code do Card</h3>
+                    ${qrHtml}
                 </div>
 
                 <div class="image-upload-section">
