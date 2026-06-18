@@ -1526,19 +1526,94 @@
             }
         }
 
+        function sanitizeFileName(value) {
+            return String(value || 'sem_nome')
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/[^a-zA-Z0-9_-]+/g, '_')
+                .replace(/_+/g, '_')
+                .replace(/^_+|_+$/g, '')
+                .toLowerCase() || 'sem_nome';
+        }
+
+        function generatePrintableQrDataUrl(card, qrSize = 700) {
+            if (!card || typeof QRious !== 'function') return '';
+
+            try {
+                const qrCanvas = document.createElement('canvas');
+                new QRious({
+                    element: qrCanvas,
+                    value: buildCardQrPayload(card),
+                    size: qrSize,
+                    level: 'L',
+                    background: 'white',
+                    foreground: 'black'
+                });
+
+                const padding = 44;
+                const headerHeight = 128;
+                const footerHeight = 112;
+                const outCanvas = document.createElement('canvas');
+                outCanvas.width = qrSize + padding * 2;
+                outCanvas.height = qrSize + headerHeight + footerHeight + padding * 2;
+
+                const ctx = outCanvas.getContext('2d');
+                if (!ctx) return '';
+
+                const clientName = String(card?.data?.clienteNome || 'Sem Nome').trim() || 'Sem Nome';
+
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, outCanvas.width, outCanvas.height);
+
+                ctx.fillStyle = '#111111';
+                ctx.textAlign = 'center';
+                ctx.font = '700 36px Segoe UI, Arial, sans-serif';
+                ctx.fillText('WashLAB - QR Code', outCanvas.width / 2, padding + 42);
+
+                ctx.font = '600 30px Segoe UI, Arial, sans-serif';
+                ctx.fillText(clientName, outCanvas.width / 2, padding + 88);
+
+                ctx.strokeStyle = '#d9d9d9';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(padding - 1, padding + headerHeight - 1, qrSize + 2, qrSize + 2);
+
+                ctx.drawImage(qrCanvas, padding, padding + headerHeight, qrSize, qrSize);
+
+                ctx.fillStyle = '#555555';
+                ctx.textAlign = 'left';
+                ctx.font = '500 20px Segoe UI, Arial, sans-serif';
+
+                const footerStartY = padding + headerHeight + qrSize + 34;
+                const safeId = String(card.id || '').trim() || '-';
+                const safeDataRegisto = String(card?.data?.dataRegisto || '-').trim() || '-';
+                const safePrevisao = String(card?.data?.previsaoConclusao || '-').trim() || '-';
+
+                ctx.fillText(`ID: ${safeId}`, padding, footerStartY);
+                ctx.fillText(`Data de Registo: ${safeDataRegisto}`, padding, footerStartY + 30);
+                ctx.fillText(`Previsao de Conclusao: ${safePrevisao}`, padding, footerStartY + 60);
+
+                return outCanvas.toDataURL('image/png');
+            } catch (err) {
+                console.error('Erro ao gerar QR para impressao:', err);
+                return '';
+            }
+        }
+
         function downloadCardQr(cardId) {
             const card = findCard(cardId);
             if (!card) return;
 
-            const qrDataUrl = generateCardQrDataUrl(card, 700);
+            const qrDataUrl = generatePrintableQrDataUrl(card, 700) || generateCardQrDataUrl(card, 700);
             if (!qrDataUrl) {
                 alert('Nao foi possivel gerar o QR code deste card.');
                 return;
             }
 
+            const clientFilePart = sanitizeFileName(card?.data?.clienteNome || 'sem_nome');
+
             const a = document.createElement('a');
             a.href = qrDataUrl;
-            a.download = `qr_${card.id}.png`;
+            a.download = `qr_${clientFilePart}_${card.id}.png`;
             a.click();
         }
 
@@ -1707,6 +1782,8 @@
             if (!card) return;
             const countryValue = card.data.pais || card.data.morada || '';
             const qrDataUrl = generateCardQrDataUrl(card, 240);
+            const qrClientName = escapeHtml(card.data.clienteNome || 'Sem Nome');
+            const qrSectionTitle = `QR Code · ${qrClientName}`;
 
             currentCardId = id;
             const modal = document.getElementById('modalOverlay');
@@ -1812,7 +1889,7 @@
                 </div>
 
                 <div class="qr-section">
-                    <h3>QR Code do Card</h3>
+                    <h3>${qrSectionTitle}</h3>
                     ${qrHtml}
                 </div>
 
