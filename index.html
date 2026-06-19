@@ -475,9 +475,8 @@
         .card-info-value {
             color: var(--text-primary);
             font-weight: 500;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            white-space: normal;
+            word-break: break-word;
         }
 
         .card-info-item.flag-item .card-info-label {
@@ -1735,15 +1734,18 @@
             const countryValue = card.data.pais || card.data.morada || '';
             const infoFlag = renderInfoFlag(countryValue);
 
-            // Mini info em duas colunas: esquerda (Comercial, Cliente, País) e direita (Procedimento)
+            const objetivoValue = [card.data.limpezaSecagem, card.data.outro].filter(Boolean).join(' / ') || '-';
+
+            // Mini info em duas colunas: esquerda (Comercial, País, Utensílios) e direita (Procedimento, Objetivo)
             const miniInfoLeft = [
                 { label: 'Comercial', value: card.data.comercial || '-' },
-                { label: 'Cliente', value: card.data.clienteNome || '-' },
-                { label: 'País', value: formatCountryWithFlag(countryValue) }
+                { label: 'País', value: formatCountryWithFlag(countryValue) },
+                { label: 'Utensílio(s)', value: card.data.utensilios || '-' }
             ];
 
             const miniInfoRight = [
                 { label: 'Procedimento', value: card.data.procedimento || '-' },
+                { label: 'Objetivo', value: objetivoValue },
                 { label: '', value: infoFlag, isHtml: true, className: 'flag-item' }
             ];
 
@@ -1766,7 +1768,7 @@
                                 ${miniInfoLeft.map(item => `
                                     <div class="card-info-item">
                                         <span class="card-info-label">${item.label}</span>
-                                        <span class="card-info-value">${item.label === 'País' ? item.value : truncate(item.value, 18)}</span>
+                                        <span class="card-info-value">${item.value}</span>
                                     </div>
                                 `).join('')}
                             </div>
@@ -1774,7 +1776,7 @@
                                 ${miniInfoRight.map(item => `
                                     <div class="card-info-item ${item.className || ''}">
                                         <span class="card-info-label">${item.label}</span>
-                                        <span class="card-info-value">${item.isHtml ? (item.value || '') : truncate(item.value, 18)}</span>
+                                        <span class="card-info-value">${item.isHtml ? (item.value || '') : item.value}</span>
                                     </div>
                                 `).join('')}
                             </div>
