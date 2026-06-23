@@ -20,7 +20,7 @@
             --text-primary: #eaeaea;
             --text-secondary: #a0a0a0;
             --success: #2ecc71;
-            --warning: #f39c12;
+            --warning: #f1c40f;
             --info: #3498db;
             --danger: #e74c3c;
             --glass: rgba(255,255,255,0.05);
@@ -373,6 +373,7 @@
 
         .card.status-nao-testado { border-left-color: var(--danger); }
         .card.status-em-teste { border-left-color: var(--warning); }
+        .card.status-teste-live-demo { border-left-color: #e67e22; }
         .card.status-testado { border-left-color: var(--success); }
 
         .card-thumbnail {
@@ -435,7 +436,8 @@
         }
 
         .status-nao-testado .card-status-badge { background: rgba(231, 76, 60, 0.2); color: var(--danger); }
-        .status-em-teste .card-status-badge { background: rgba(243, 156, 18, 0.2); color: var(--warning); }
+        .status-em-teste .card-status-badge { background: rgba(241, 196, 15, 0.2); color: var(--warning); }
+        .status-teste-live-demo .card-status-badge { background: rgba(230, 126, 34, 0.2); color: #e67e22; }
         .status-testado .card-status-badge { background: rgba(46, 204, 113, 0.2); color: var(--success); }
 
         .card-info-mini {
@@ -736,7 +738,12 @@
 
         .status-btn.active-em-teste {
             border-color: var(--warning);
-            background: rgba(243, 156, 18, 0.15);
+            background: rgba(241, 196, 15, 0.15);
+        }
+
+        .status-btn.active-teste-live-demo {
+            border-color: #e67e22;
+            background: rgba(230, 126, 34, 0.15);
         }
 
         .status-btn.active-testado {
@@ -1058,6 +1065,7 @@
         const STATUSES = {
             'nao-testado': { label: 'Não Testado', class: 'status-nao-testado' },
             'em-teste': { label: 'Em Teste', class: 'status-em-teste' },
+            'teste-LiveDemo': { label: 'Teste Live Demo', class: 'status-teste-live-demo' },
             'testado': { label: 'Já Testado / Live Demo', class: 'status-testado' }
         };
 
@@ -1982,6 +1990,9 @@
                     <button class="status-btn ${card.status === 'em-teste' ? 'active-em-teste' : ''}" onclick="changeStatus('em-teste')">
                         🟡 Em Teste
                     </button>
+                     <button class="status-btn ${card.status === 'teste-LiveDemo' ? 'active-teste-live-demo' : ''}" onclick="changeStatus('teste-LiveDemo')">
+                        🟠 Teste Live Demo
+                    </button>
                     <button class="status-btn ${card.status === 'testado' ? 'active-testado' : ''}" onclick="changeStatus('testado')">
                         🟢 Já Testado / Live Demo
                     </button>
@@ -2038,9 +2049,10 @@
             const statusClasses = {
                 'nao-testado': 'active-nao-testado',
                 'em-teste': 'active-em-teste',
+                'teste-LiveDemo': 'active-teste-live-demo',
                 'testado': 'active-testado'
             };
-            const statusOrder = ['nao-testado', 'em-teste', 'testado'];
+            const statusOrder = ['nao-testado', 'em-teste', 'teste-LiveDemo', 'testado'];
             document.querySelectorAll('.status-btn').forEach((btn, i) => {
                 btn.className = 'status-btn';
                 if (statusOrder[i] === newStatus) {
