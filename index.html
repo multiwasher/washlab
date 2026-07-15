@@ -1618,11 +1618,27 @@
 
                 ctx.fillStyle = '#111111';
                 ctx.textAlign = 'center';
+               // ctx.font = '700 36px Segoe UI, Arial, sans-serif';
+               // ctx.fillText('WashLAB - QR Code', outCanvas.width / 2, padding + 42);
+          
+
+               // ctx.font = '600 30px Segoe UI, Arial, sans-serif';
+               // ctx.fillText(clientName, outCanvas.width / 2, padding + 88);
+
+                // Título principal (Tamanho 36px, Negrito 700)
+                
                 ctx.font = '700 36px Segoe UI, Arial, sans-serif';
                 ctx.fillText('WashLAB - QR Code', outCanvas.width / 2, padding + 42);
 
+                // O "BREAK" / PARÁGRAFO é feito aqui: 
+                // Aumentamos o Y de (padding + 88) para (padding + 118) para dar mais espaço vertical.
+
+                // Nome do Cliente (Tamanho 30px, Semibold 600)
                 ctx.font = '600 30px Segoe UI, Arial, sans-serif';
-                ctx.fillText(clientName, outCanvas.width / 2, padding + 88);
+                ctx.fillText(clientName, outCanvas.width / 2, padding + 100);
+
+
+               
 
                 const flagUrl = getCountryFlagUrl(card?.data?.pais || card?.data?.morada || '');
                 if (flagUrl) {
@@ -1631,8 +1647,8 @@
                         const flagWidth = 108;
                         const flagHeight = 74;
                         const flagX = outCanvas.width - padding - flagWidth;
-                        const flagY = padding + 8;
-
+                        const flagY = padding + 1;
+//MEXEMOS AQUI!!!
                         ctx.save();
                         ctx.shadowColor = 'rgba(0,0,0,0.2)';
                         ctx.shadowBlur = 8;
