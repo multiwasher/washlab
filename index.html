@@ -1461,7 +1461,7 @@
                 zona: sanitizeQrValue(card.zone),
                 cliente: sanitizeQrValue(data.clienteNome),
                 comercial: sanitizeQrValue(data.comercial),
-                pais: sanitizeQrValue(data.pais || data.morada),
+                pais: sanitizeQrValue(data.pais),
                 procedimento: sanitizeQrValue(data.procedimento),
                 vat: sanitizeQrValue(data.vat),
                 registo: sanitizeQrValue(data.dataRegisto),
@@ -1757,7 +1757,7 @@
 
         function renderCard(card) {
             const statusInfo = STATUSES[card.status] || STATUSES['nao-testado'];
-            const countryValue = card.data.pais || card.data.morada || '';
+            const countryValue = card.data.pais || '';
             const infoFlag = renderInfoFlag(countryValue);
 
             const objetivoValue = [card.data.limpezaSecagem, card.data.outro].filter(Boolean).join(' / ') || '-';
@@ -1912,7 +1912,7 @@
         function openCard(id) {
             const card = findCard(id);
             if (!card) return;
-            const countryValue = card.data.pais || card.data.morada || '';
+            const countryValue = card.data.pais || '';
             const qrDataUrl = generateCardQrDataUrl(card, 240);
             const qrClientName = escapeHtml(card.data.clienteNome || 'Sem Nome');
             const qrSectionTitle = `QR Code · ${qrClientName}`;
@@ -1957,7 +1957,9 @@
                     rows: [
                         { label: 'Nome Cliente/Revendedor', value: card.data.clienteNome },
                         { label: 'País', value: formatCountryWithFlag(countryValue) },
-                        { label: 'Nº. VAT', value: card.data.vat }
+                        { label: 'Morada', value: card.data.morada },
+                        { label: 'Nº. VAT', value: card.data.vat },
+                        { label: 'Pessoa de contacto', value: card.data.pessoaContacto }
                     ]
                 },
                 {
@@ -2265,43 +2267,48 @@
                         return '';
                     };
 
-                    // ALL cell mappings as specified by user:
+                    // ALL cell mappings as specified by user (updated: 2 rows added to
+                    // section "2. Dados do Cliente/Revendedor" - Morada e Pessoa de contacto):
                     // B4  (index 3):  Nome Comercial Responsável
                     // B6  (index 5):  Nome Cliente/Revendedor
                     // B7  (index 6):  País
-                    // B8  (index 7):  Nº. VAT
-                    // B10 (index 9):  Procedimento (Live Demo / Testes Internos / Estudo)
-                    // B11 (index 10): Idioma
-                    // B13 (index 12): Utensílio(s)
-                    // B14 (index 13): Quantidade Utensílios
-                    // B15 (index 14): Trolley(s)
-                    // B16 (index 15): Quantidade Trolleys
-                    // B18 (index 17): Tipo de Sujidade
-                    // B20 (index 19): Limpeza | Secagem
-                    // B21 (index 20): Outro
-                    // B24 (index 23): Observações
-                    // B25 (index 24): Temperatura Máxima
-                    // B27 (index 26): Data de Registo (DATE)
-                    // B28 (index 27): Previsão de Conclusão (DATE)
+                    // B8  (index 7):  Morada
+                    // B9  (index 8):  Nº. VAT
+                    // B10 (index 9):  Pessoa de contacto
+                    // B12 (index 11): Procedimento (Live Demo / Testes Internos / Estudo)
+                    // B13 (index 12): Idioma
+                    // B15 (index 14): Utensílio(s)
+                    // B16 (index 15): Quantidade Utensílios
+                    // B17 (index 16): Trolley(s)
+                    // B18 (index 17): Quantidade Trolleys
+                    // B20 (index 19): Tipo de Sujidade
+                    // B22 (index 21): Limpeza | Secagem
+                    // B23 (index 22): Outro
+                    // B26 (index 25): Observações
+                    // B27 (index 26): Temperatura Máxima
+                    // B29 (index 28): Data de Registo (DATE)
+                    // B30 (index 29): Previsão de Conclusão (DATE)
 
                     const parsedData = {
                         comercial: getCell(3),           // B4
                         clienteNome: getCell(5),          // B6
                         pais: getCell(6),                 // B7
-                        vat: getCell(7),                  // B8
-                        procedimento: getCell(9),         // B10
-                        idioma: getCell(10),              // B11
-                        utensilios: getCell(12),          // B13
-                        qtdUtensilios: getCell(13),       // B14
-                        trolleys: getCell(14),            // B15
-                        qtdTrolleys: getCell(15),         // B16
-                        sujidade: getCell(17),            // B18
-                        limpezaSecagem: getCell(19),      // B20
-                        outro: getCell(20),               // B21
-                        observacoes: getCell(23),         // B24
-                        tempMax: getCell(24),             // B25
-                        dataRegisto: excelDateToString(getCell(26)),         // B27 - converted to date
-                        previsaoConclusao: excelDateToString(getCell(27))    // B28 - converted to date
+                        morada: getCell(7),               // B8
+                        vat: getCell(8),                  // B9
+                        pessoaContacto: getCell(9),       // B10
+                        procedimento: getCell(11),        // B12
+                        idioma: getCell(12),              // B13
+                        utensilios: getCell(14),          // B15
+                        qtdUtensilios: getCell(15),       // B16
+                        trolleys: getCell(16),            // B17
+                        qtdTrolleys: getCell(17),         // B18
+                        sujidade: getCell(19),            // B20
+                        limpezaSecagem: getCell(21),      // B22
+                        outro: getCell(22),               // B23
+                        observacoes: getCell(25),         // B26
+                        tempMax: getCell(26),             // B27
+                        dataRegisto: excelDateToString(getCell(28)),         // B29 - converted to date
+                        previsaoConclusao: excelDateToString(getCell(29))    // B30 - converted to date
                     };
 
                     console.log('=== PARSED DATA ===');
