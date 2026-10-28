@@ -1111,12 +1111,15 @@
         let currentCardId = null;
 
         // ===================== INITIALIZATION =====================
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             if (renderQrInfoFromUrlIfPresent()) {
                 return;
             }
 
-            loadFromStorage();
+            // Limpa dados antigos que ficaram no browser de versões anteriores
+            try { localStorage.removeItem('dashboardData'); } catch (e) {}
+
+            await loadFromSheet();
             normalizeDashboardData();
             renderDashboard();
             setupUpload();
@@ -1909,16 +1912,9 @@
                     compressImageFile(e.target.files[0]).then((dataUrl) => {
                         const card = findCard(cardId);
                         if (card) {
-                            const previousThumbnail = card.thumbnail;
-                            const previousImages = card.images ? card.images.slice() : undefined;
                             card.thumbnail = dataUrl;
                             if (!card.images) card.images = [];
                             card.images.push(dataUrl);
-                            if (!saveToStorage()) {
-                                card.thumbnail = previousThumbnail;
-                                card.images = previousImages;
-                                return;
-                            }
                             renderDashboard();
                         }
                     }).catch((err) => {
@@ -1941,7 +1937,6 @@
                 } else {
                     card.thumbnail = null;
                 }
-                saveToStorage();
                 renderDashboard();
                 openCard(cardId);
             }
@@ -2122,17 +2117,10 @@
                         compressImageFile(file).then((dataUrl) => {
                             const card = findCard(currentCardId);
                             if (card) {
-                                const previousThumbnail = card.thumbnail;
-                                const previousImages = card.images ? card.images.slice() : undefined;
                                 if (!card.images) card.images = [];
                                 card.images.push(dataUrl);
                                 if (!card.thumbnail) {
                                     card.thumbnail = dataUrl;
-                                }
-                                if (!saveToStorage()) {
-                                    card.thumbnail = previousThumbnail;
-                                    card.images = previousImages;
-                                    return;
                                 }
                                 renderDashboard();
                                 openCard(currentCardId);
@@ -2158,7 +2146,6 @@
             if (!card) return;
 
             card.status = newStatus;
-            saveToStorage();
             renderDashboard();
             syncCardToSheet(card, 'status');
 
@@ -2204,7 +2191,6 @@
                 card.data[input.dataset.field] = value;
             });
 
-            if (!saveToStorage()) return;
             renderDashboard();
             syncCardToSheet(card, 'edit');
 
@@ -2240,7 +2226,6 @@
                     if (idx !== -1) {
                         syncCardToSheet(dashboardData[zone][sub][idx], 'delete');
                         dashboardData[zone][sub].splice(idx, 1);
-                        saveToStorage();
                         renderDashboard();
                         return;
                     }
@@ -2275,8 +2260,6 @@
                 dashboardData[newZone][targetSubSection] = [];
             }
             dashboardData[newZone][targetSubSection].push(card);
-
-            saveToStorage();
             renderDashboard();
             syncCardToSheet(card, 'move');
         }
@@ -2291,8 +2274,6 @@
 
             zoneSubSections[zone] = [...getZoneSubSections(zone), trimmedName];
             dashboardData[zone][trimmedName] = [];
-
-            saveToStorage();
             renderDashboard();
         }
 
@@ -2310,10 +2291,9 @@
 
             if (!confirm(confirmMessage)) return;
 
+            ((dashboardData[zone] || {})[subSectionName] || []).forEach(card => syncCardToSheet(card, 'delete'));
             zoneSubSections[zone] = getZoneSubSections(zone).filter(sub => sub !== subSectionName);
             delete dashboardData[zone][subSectionName];
-
-            saveToStorage();
             renderDashboard();
         }
 
@@ -2444,7 +2424,6 @@
                 dashboardData[validZone][subSection] = [];
             }
             dashboardData[validZone][subSection].push(newCard);
-            saveToStorage();
             renderDashboard();
             syncCardToSheet(newCard, 'create');
 
@@ -2670,8 +2649,6 @@
                 images: [],
                 createdAt: new Date().toISOString()
             });
-
-            saveToStorage();
             renderDashboard();
         }
 
@@ -2713,39 +2690,50 @@
             }).catch(err => console.error('Erro ao sincronizar com Google Sheets:', err));
         }
 
-        // ===================== STORAGE =====================
-        function saveToStorage() {
-            try {
-                localStorage.setItem('dashboardData', JSON.stringify({
-                    dashboardData,
-                    zoneSubSections
-                }));
-                return true;
-            } catch (err) {
-                console.error('Error saving to storage:', err);
-                if (err && (err.name === 'QuotaExceededError' || err.code === 22)) {
-                    alert('Armazenamento cheio! Não foi possível guardar. Remova algumas imagens antigas para libertar espaço.');
-                } else {
-                    alert('Erro ao guardar os dados.');
-                }
-                return false;
-            }
-        }
+        // ===================== CARREGAR DO SHEET =====================
+        // O Google Sheet é a única fonte de dados; nada é guardado no browser.
+        const SHEET_META_KEYS = ['id', 'createdAt', 'updatedAt', 'action', 'zone', 'section', 'status', 'numImagens', 'eliminado'];
 
-        function loadFromStorage() {
-            const saved = localStorage.getItem('dashboardData');
-            if (saved) {
-                try {
-                    const parsed = JSON.parse(saved);
-                    if (parsed && parsed.dashboardData && parsed.zoneSubSections) {
-                        dashboardData = parsed.dashboardData;
-                        zoneSubSections = parsed.zoneSubSections;
-                    } else {
-                        dashboardData = parsed;
+        async function loadFromSheet() {
+            if (!SHEETS_WEBAPP_URL) return;
+            try {
+                const res = await fetch(SHEETS_WEBAPP_URL);
+                const result = await res.json();
+                if (!result.ok) throw new Error(result.error || 'Resposta inválida');
+                if (!Array.isArray(result.cards)) throw new Error('O Apps Script publicado não devolve cards (falta publicar nova versão).');
+
+                const statusByLabel = Object.fromEntries(
+                    Object.entries(STATUSES).map(([key, s]) => [s.label, key])
+                );
+
+                zoneSubSections = createEmptyZoneSubSections();
+                dashboardData = createEmptyDashboard(zoneSubSections);
+
+                result.cards.forEach(row => {
+                    const zone = ZONES.includes(row.zone) ? row.zone : 'A';
+                    const sub = String(row.section || '').trim() || getZoneSubSections(zone)[0];
+                    const data = { ...row };
+                    SHEET_META_KEYS.forEach(key => delete data[key]);
+
+                    if (!zoneSubSections[zone].includes(sub)) {
+                        zoneSubSections[zone].push(sub);
+                        dashboardData[zone][sub] = [];
                     }
-                } catch (e) {
-                    console.error('Error loading from storage:', e);
-                }
+                    dashboardData[zone][sub].push({
+                        id: row.id,
+                        zone,
+                        status: statusByLabel[row.status] || row.status || 'nao-testado',
+                        data,
+                        thumbnail: null,
+                        images: [],
+                        createdAt: row.createdAt
+                    });
+                });
+
+                ZONES.forEach(zone => zoneSubSections[zone].sort((a, b) => a.localeCompare(b, undefined, { numeric: true })));
+            } catch (err) {
+                console.error('Erro ao carregar do Google Sheets:', err);
+                alert('Não foi possível carregar os dados do Google Sheets.\n' + err.message);
             }
         }
 
@@ -2753,7 +2741,6 @@
             if (!confirm('Tem a certeza que deseja limpar todos os dados?')) return;
             zoneSubSections = createEmptyZoneSubSections();
             dashboardData = createEmptyDashboard(zoneSubSections);
-            saveToStorage();
             renderDashboard();
         }
 

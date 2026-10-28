@@ -83,9 +83,24 @@ function doPost(e) {
   }
 }
 
-// Teste rápido no browser: abre o URL da aplicação web
+// Devolve os cards não eliminados (o dashboard lê daqui ao arrancar)
 function doGet() {
-  return json_({ ok: true, sheet: SHEET_NAME });
+  try {
+    const sheet = getSheet_();
+    if (sheet.getLastRow() < 2) return json_({ ok: true, cards: [] });
+
+    const rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, COLUMNS.length).getDisplayValues();
+    const cards = rows
+      .map(row => COLUMNS.reduce((obj, [, key], i) => {
+        obj[key] = row[i];
+        return obj;
+      }, {}))
+      .filter(c => c.id && c.eliminado !== 'Sim');
+
+    return json_({ ok: true, cards });
+  } catch (err) {
+    return json_({ ok: false, error: String(err) });
+  }
 }
 
 function getSheet_() {
