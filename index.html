@@ -726,7 +726,9 @@
         }
 
         .info-value textarea.info-input {
-            resize: vertical;
+            box-sizing: border-box;
+            overflow-y: hidden;
+            resize: none;
             text-align: left;
         }
 
@@ -2108,6 +2110,15 @@
             `;
 
             modal.classList.add('active');
+            body.querySelectorAll('textarea.info-input').forEach(textarea => {
+                resizeInfoTextarea(textarea);
+                textarea.addEventListener('input', () => resizeInfoTextarea(textarea));
+            });
+        }
+
+        function resizeInfoTextarea(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = `${textarea.scrollHeight}px`;
         }
 
         function triggerModalImageUpload() {
