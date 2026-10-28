@@ -1998,7 +1998,7 @@
                 {
                     title: '3. Procedimento Pretendido',
                     rows: [
-                        { label: 'Procedimento', field: 'procedimento' },
+                        { label: 'Procedimento', field: 'procedimento', options: ['Live Demo', 'Testes Internos', 'Estudo'] },
                         { label: 'Idioma', field: 'idioma' }
                     ]
                 },
@@ -2047,6 +2047,10 @@
                 }
                 if (row.type === 'textarea') {
                     return `<textarea class="info-input" data-field="${row.field}" rows="2">${escapeHtml(raw)}</textarea>`;
+                }
+                if (row.options) {
+                    const options = row.options.includes(raw) ? row.options : [...row.options, raw].filter(Boolean);
+                    return `<select class="info-input" data-field="${row.field}"><option value=""${raw ? '' : ' selected'} disabled>Selecione...</option>${options.map(option => `<option value="${escapeHtml(option)}"${option === raw ? ' selected' : ''}>${escapeHtml(option)}</option>`).join('')}</select>`;
                 }
                 return `<input type="text" class="info-input" data-field="${row.field}" value="${escapeHtml(raw)}">`;
             };
