@@ -707,6 +707,38 @@
             font-weight: 500;
             text-align: right;
             max-width: 60%;
+            flex: 1;
+        }
+
+        .info-input {
+            background: var(--glass);
+            color: var(--text-primary);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 6px;
+            padding: 4px 8px;
+            font: inherit;
+            color-scheme: dark;
+        }
+
+        .info-value .info-input {
+            width: 100%;
+            text-align: right;
+        }
+
+        .info-value textarea.info-input {
+            resize: vertical;
+            text-align: left;
+        }
+
+        .info-save-bar {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 12px;
+        }
+
+        .info-input:focus {
+            outline: none;
+            border-color: var(--accent);
         }
 
         .status-selector {
@@ -1032,8 +1064,8 @@
         </div>
     </header>
 
-    <button class="upload-fab" id="uploadFab" type="button" aria-label="Fazer upload do ficheiro Excel" title="Carregar Excel">+</button>
-    <input type="file" id="fileInput" class="hidden-file-input" accept=".xlsx,.xls,.csv">
+    <button class="upload-fab" id="uploadFab" type="button" aria-label="Fazer upload do ficheiro Excel ou PDF" title="Carregar Excel / PDF">+</button>
+    <input type="file" id="fileInput" class="hidden-file-input" accept=".xlsx,.xls,.csv,.pdf">
 
     <!--<div class="controls">
         <button onclick="exportData()">💾 Exportar Dados</button>
@@ -1059,6 +1091,7 @@
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <script>
         // ===================== DATA STRUCTURE =====================
@@ -1918,7 +1951,6 @@
         function openCard(id) {
             const card = findCard(id);
             if (!card) return;
-            const countryValue = card.data.pais || '';
             const qrDataUrl = generateCardQrDataUrl(card, 240);
             const qrClientName = escapeHtml(card.data.clienteNome || 'Sem Nome');
             const qrSectionTitle = `QR Code · ${qrClientName}`;
@@ -1955,63 +1987,74 @@
                 {
                     title: '1. Comercial Responsável',
                     rows: [
-                        { label: 'Nome Comercial Responsável', value: card.data.comercial }
+                        { label: 'Nome Comercial Responsável', field: 'comercial' }
                     ]
                 },
                 {
                     title: '2. Dados do Cliente/Revendedor',
                     rows: [
-                        { label: 'Nome Cliente/Revendedor', value: card.data.clienteNome },
-                        { label: 'País', value: formatCountryWithFlag(countryValue) },
-                        { label: 'Morada', value: card.data.morada },
-                        { label: 'Nº. VAT', value: card.data.vat },
-                        { label: 'Pessoa de contacto', value: card.data.pessoaContacto }
+                        { label: 'Nome Cliente/Revendedor', field: 'clienteNome' },
+                        { label: 'País', field: 'pais' },
+                        { label: 'Morada', field: 'morada' },
+                        { label: 'Nº. VAT', field: 'vat' },
+                        { label: 'Pessoa de contacto', field: 'pessoaContacto' }
                     ]
                 },
                 {
                     title: '3. Procedimento Pretendido',
                     rows: [
-                        { label: 'Procedimento', value: card.data.procedimento },
-                        { label: 'Idioma', value: card.data.idioma }
+                        { label: 'Procedimento', field: 'procedimento' },
+                        { label: 'Idioma', field: 'idioma' }
                     ]
                 },
                 {
                     title: '4. Especificidade do Utensílio e do Trolley',
                     rows: [
-                        { label: 'Utensílio(s)', value: card.data.utensilios },
-                        { label: 'Quantidade Utensílios', value: card.data.qtdUtensilios },
-                        { label: 'Trolley(s)', value: card.data.trolleys },
-                        { label: 'Quantidade Trolleys', value: card.data.qtdTrolleys }
+                        { label: 'Utensílio(s)', field: 'utensilios', type: 'textarea' },
+                        { label: 'Quantidade Utensílios', field: 'qtdUtensilios' },
+                        { label: 'Trolley(s)', field: 'trolleys', type: 'textarea' },
+                        { label: 'Quantidade Trolleys', field: 'qtdTrolleys' }
                     ]
                 },
                 {
                     title: '5. Tipo de Sujidade',
                     rows: [
-                        { label: 'Tipo de Sujidade', value: card.data.sujidade }
+                        { label: 'Tipo de Sujidade', field: 'sujidade', type: 'textarea' }
                     ]
                 },
                 {
                     title: '6. Principais Objetivos da Lavagem',
                     rows: [
-                        { label: 'Limpeza / Secagem', value: card.data.limpezaSecagem },
-                        { label: 'Outro', value: card.data.outro }
+                        { label: 'Limpeza / Secagem', field: 'limpezaSecagem' },
+                        { label: 'Outro', field: 'outro' }
                     ]
                 },
                 {
                     title: '7. Observações / Imagens',
                     rows: [
-                        { label: 'Observações', value: card.data.observacoes },
-                        { label: 'Temperatura Máxima', value: card.data.tempMax }
+                        { label: 'Observações', field: 'observacoes', type: 'textarea' },
+                        { label: 'Temperatura Máxima', field: 'tempMax' }
                     ]
                 },
                 {
                     title: '8. Prazos',
                     rows: [
-                        { label: 'Data de Registo', value: card.data.dataRegisto },
-                        { label: 'Previsão de Conclusão', value: card.data.previsaoConclusao }
+                        { label: 'Data de Registo', field: 'dataRegisto', type: 'date' },
+                        { label: 'Previsão de Conclusão', field: 'previsaoConclusao', type: 'date' }
                     ]
                 }
             ];
+
+            const renderInfoInput = (row) => {
+                const raw = card.data[row.field] || '';
+                if (row.type === 'date') {
+                    return `<input type="date" class="info-input" data-field="${row.field}" data-type="date" value="${ddmmyyyyToIso(raw)}">`;
+                }
+                if (row.type === 'textarea') {
+                    return `<textarea class="info-input" data-field="${row.field}" rows="2">${escapeHtml(raw)}</textarea>`;
+                }
+                return `<input type="text" class="info-input" data-field="${row.field}" value="${escapeHtml(raw)}">`;
+            };
 
             body.innerHTML = `
                 <div class="info-grid">
@@ -2021,11 +2064,14 @@
                             ${section.rows.map(row => `
                                 <div class="info-row">
                                     <span class="info-label">${row.label}</span>
-                                    <span class="info-value">${row.value || '-'}</span>
+                                    <span class="info-value">${renderInfoInput(row)}</span>
                                 </div>
                             `).join('')}
                         </div>
                     `).join('')}
+                </div>
+                <div class="info-save-bar">
+                    <button class="qr-download-btn" onclick="saveCardEdits()">💾 Guardar alterações</button>
                 </div>
 
                 <div class="qr-section">
@@ -2114,6 +2160,7 @@
             card.status = newStatus;
             saveToStorage();
             renderDashboard();
+            syncCardToSheet(card, 'status');
 
             // Update status buttons in-place without re-rendering the modal
             const statusClasses = {
@@ -2138,6 +2185,42 @@
             }
         }
 
+        function ddmmyyyyToIso(value) {
+            const m = String(value || '').trim().match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);
+            return m ? `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` : '';
+        }
+
+        function saveCardEdits() {
+            if (!currentCardId) return;
+            const card = findCard(currentCardId);
+            if (!card) return;
+
+            document.querySelectorAll('#modalOverlay .info-input[data-field]').forEach(input => {
+                let value = input.value.trim();
+                if (input.dataset.type === 'date') {
+                    const [year, month, day] = value.split('-');
+                    value = year && month && day ? `${day}/${month}/${year}` : '';
+                }
+                card.data[input.dataset.field] = value;
+            });
+
+            if (!saveToStorage()) return;
+            renderDashboard();
+            syncCardToSheet(card, 'edit');
+
+            const newQrDataUrl = generateCardQrDataUrl(card, 240);
+            const qrImg = document.querySelector('.qr-preview img');
+            if (qrImg && newQrDataUrl) {
+                qrImg.src = newQrDataUrl;
+            }
+
+            const saveBtn = document.querySelector('.info-save-bar button');
+            if (saveBtn) {
+                saveBtn.textContent = '✔ Guardado';
+                setTimeout(() => { saveBtn.textContent = '💾 Guardar alterações'; }, 1500);
+            }
+        }
+
         function findCard(id) {
             for (const zone of ZONES) {
                 for (const sub of getZoneSubSections(zone)) {
@@ -2155,6 +2238,7 @@
                 for (const sub of getZoneSubSections(zone)) {
                     const idx = dashboardData[zone][sub].findIndex(c => c.id === id);
                     if (idx !== -1) {
+                        syncCardToSheet(dashboardData[zone][sub][idx], 'delete');
                         dashboardData[zone][sub].splice(idx, 1);
                         saveToStorage();
                         renderDashboard();
@@ -2194,6 +2278,7 @@
 
             saveToStorage();
             renderDashboard();
+            syncCardToSheet(card, 'move');
         }
 
         function addSubSectionToZone(zone) {
@@ -2232,7 +2317,7 @@
             renderDashboard();
         }
 
-        // ===================== EXCEL PARSING =====================
+        // ===================== EXCEL / PDF UPLOAD =====================
         function setupUpload() {
             const uploadFab = document.getElementById('uploadFab');
             const fileInput = document.getElementById('fileInput');
@@ -2252,6 +2337,11 @@
         }
 
         function handleFile(file) {
+            if (/\.pdf$/i.test(file.name) || file.type === 'application/pdf') {
+                handlePdfFile(file);
+                return;
+            }
+
             const reader = new FileReader();
             reader.onload = (e) => {
                 try {
@@ -2314,38 +2404,14 @@
                         observacoes: getCell(25),         // B26
                         tempMax: getCell(26),             // B27
                         dataRegisto: excelDateToString(getCell(28)),         // B29 - converted to date
-                        previsaoConclusao: excelDateToString(getCell(29))    // B30 - converted to date
+                        previsaoConclusao: excelDateToString(getCell(29)),   // B30 - converted to date
+                        origem: 'Excel'
                     };
 
                     console.log('=== PARSED DATA ===');
                     console.log(parsedData);
 
-                    const zone = prompt('Escolha a Zona (A, B, C, D):', 'A')?.toUpperCase() || 'A';
-                    const validZone = ZONES.includes(zone) ? zone : 'A';
-
-                    const zoneSections = getZoneSubSections(validZone);
-                    const subPrompt = `Escolha a Secção para a Zona ${validZone}:\n${zoneSections.map((sub) => `${sub}. ${sub}`).join('\n')}`;
-                    const subChoice = prompt(subPrompt, '1') || '1';
-                    const subSection = resolveZoneSectionChoice(subChoice, zoneSections);
-
-                    const newCard = {
-                        id: 'card_' + Date.now(),
-                        zone: validZone,
-                        status: 'nao-testado',
-                        data: parsedData,
-                        thumbnail: null,
-                        images: [],
-                        createdAt: new Date().toISOString()
-                    };
-
-                    if (!dashboardData[validZone][subSection]) {
-                        dashboardData[validZone][subSection] = [];
-                    }
-                    dashboardData[validZone][subSection].push(newCard);
-                    saveToStorage();
-                    renderDashboard();
-
-                    alert(`Card criado com sucesso na Zona ${validZone}, ${subSection}!\n\nCliente: ${parsedData.clienteNome || 'N/A'}\nComercial: ${parsedData.comercial || 'N/A'}\nRegisto: ${parsedData.dataRegisto || 'N/A'}\nConclusão: ${parsedData.previsaoConclusao || 'N/A'}`);
+                    addCardFromParsedData(parsedData);
 
                 } catch (err) {
                     console.error('Error parsing file:', err);
@@ -2353,6 +2419,200 @@
                 }
             };
             reader.readAsArrayBuffer(file);
+        }
+
+        function addCardFromParsedData(parsedData) {
+            const zone = prompt('Escolha a Zona (A, B, C, D):', 'A')?.toUpperCase() || 'A';
+            const validZone = ZONES.includes(zone) ? zone : 'A';
+
+            const zoneSections = getZoneSubSections(validZone);
+            const subPrompt = `Escolha a Secção para a Zona ${validZone}:\n${zoneSections.map((sub) => `${sub}. ${sub}`).join('\n')}`;
+            const subChoice = prompt(subPrompt, '1') || '1';
+            const subSection = resolveZoneSectionChoice(subChoice, zoneSections);
+
+            const newCard = {
+                id: 'card_' + Date.now(),
+                zone: validZone,
+                status: 'nao-testado',
+                data: parsedData,
+                thumbnail: null,
+                images: [],
+                createdAt: new Date().toISOString()
+            };
+
+            if (!dashboardData[validZone][subSection]) {
+                dashboardData[validZone][subSection] = [];
+            }
+            dashboardData[validZone][subSection].push(newCard);
+            saveToStorage();
+            renderDashboard();
+            syncCardToSheet(newCard, 'create');
+
+            alert(`Card criado com sucesso na Zona ${validZone}, ${subSection}!\n\nCliente: ${parsedData.clienteNome || 'N/A'}\nComercial: ${parsedData.comercial || 'N/A'}\nRegisto: ${parsedData.dataRegisto || 'N/A'}\nConclusão: ${parsedData.previsaoConclusao || 'N/A'}`);
+        }
+
+        // ===================== PDF PARSING =====================
+        // Standard "Material Identification" PDF (Somengil / Multiwasher)
+        async function handlePdfFile(file) {
+            try {
+                if (!window.pdfjsLib) {
+                    throw new Error('Biblioteca PDF não carregada.');
+                }
+                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+                const buffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
+
+                const pages = [];
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const content = await page.getTextContent();
+                    pages.push(content.items.map(item => item.str).join(' '));
+                }
+
+                const text = pages.join(' ')
+                    .replace(/MULTI\s*WASHER/gi, ' ')
+                    .replace(/washing engineering/gi, ' ')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+
+                console.log('=== RAW PDF TEXT ===');
+                console.log(text);
+
+                const parsedData = parseMaterialIdentificationText(text);
+
+                console.log('=== PARSED DATA ===');
+                console.log(parsedData);
+
+                if (!parsedData.clienteNome && !parsedData.comercial) {
+                    throw new Error('O PDF não corresponde ao formato "Material Identification".');
+                }
+
+                addCardFromParsedData(parsedData);
+
+            } catch (err) {
+                console.error('Error parsing PDF:', err);
+                alert('Erro ao processar o PDF. Verifique o formato.\nDetalhe: ' + err.message);
+            }
+        }
+
+        function parseMaterialIdentificationText(text) {
+            const match = (regex) => {
+                const m = text.match(regex);
+                return m ? m[1].trim() : '';
+            };
+
+            // Section 1-4 (labels end with ":" - the cover page index has no colons)
+            const comercial = match(/SALES MANAGER:\s*NAME:\s*(.*?)\s*E-MAIL:/i);
+            const clienteNome = match(/RESELLER INFORMATION:\s*NAME:\s*(.*?)\s*ADDRESS:/i);
+            const morada = match(/ADDRESS:\s*(.*?)\s*COUNTRY:/i);
+            const pais = match(/COUNTRY:\s*(.*?)\s*VAT ID:/i);
+            const vat = match(/VAT ID:\s*(.*?)\s*MAIN RESPONS-?\s*ABLE:/i);
+            const responsavel = match(/MAIN RESPONS-?\s*ABLE:\s*(.*?)\s*MAIN RESPONS-?\s*ABLE PHONE:/i);
+            const telefone = match(/ABLE PHONE:\s*(.*?)\s*LANGUAGE:/i);
+            const idioma = match(/LANGUAGE:\s*(.*?)\s*(?:\d\s*)?SECTOR:/i);
+            const sector = match(/SECTOR:\s*(.*?)\s*(?:\d\s*)?CLIENT ISSUES:/i);
+            const issues = match(/CLIENT ISSUES:\s*(.*?)\s*(?:\d\s*)?UTENSIL AND TROLLEY SPECIFICS:/i);
+
+            // Trolleys: "Item 1: T1 Quantity: 2 Reference: TRA377"
+            const trolleyList = [...text.matchAll(/Item\s*\d+:\s*(\S+)\s*Quantity:\s*(\d+)\s*Reference:\s*(\S+)/gi)]
+                .map(m => ({ item: m[1], qty: parseInt(m[2], 10) || 0, reference: m[3] }));
+
+            // Utensils: detail blocks "UTENSIL U1 Type: ... Drying Needs: Ja"
+            const utensilList = parseUtensilBlocks(text);
+
+            const unique = (values) => [...new Set(values.filter(Boolean))];
+            const sum = (values) => values.reduce((total, value) => total + value, 0);
+
+            const trolleyRefs = trolleyList.reduce((acc, t) => {
+                acc[t.reference] = (acc[t.reference] || 0) + t.qty;
+                return acc;
+            }, {});
+
+            const objetivos = unique(utensilList.map(u => u.washingObjective));
+            if (utensilList.some(u => /^(ja|yes|sim)$/i.test(u.dryingNeeds))) {
+                objetivos.push('Secagem');
+            }
+
+            const temperaturaSensivel = utensilList
+                .filter(u => /^(yes|ja|sim)$/i.test(u.temperatureSensitive))
+                .map(u => u.id);
+
+            const observacoes = [
+                sector ? `Setor: ${sector}` : '',
+                issues ? `Client issues: ${issues}` : '',
+                temperaturaSensivel.length ? `Sensíveis à temperatura: ${temperaturaSensivel.join(', ')}` : ''
+            ].filter(Boolean).join(' | ');
+
+            const today = new Date();
+            const dataRegisto = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
+
+            return {
+                comercial,
+                clienteNome,
+                pais,
+                morada,
+                vat,
+                pessoaContacto: [responsavel, telefone].filter(Boolean).join(' · '),
+                procedimento: '',
+                idioma: idioma.toUpperCase(),
+                utensilios: unique(utensilList.map(u => u.type)).join(', '),
+                qtdUtensilios: utensilList.length ? String(sum(utensilList.map(u => u.quantity))) : '',
+                trolleys: Object.entries(trolleyRefs).map(([ref, qty]) => `${ref} (${qty})`).join(', '),
+                qtdTrolleys: trolleyList.length ? String(sum(trolleyList.map(t => t.qty))) : '',
+                sujidade: unique(utensilList.map(u => u.dirtType)).join(', '),
+                limpezaSecagem: objetivos.join(', '),
+                outro: '',
+                observacoes,
+                tempMax: '',
+                dataRegisto,
+                previsaoConclusao: '',
+                utensiliosDetalhe: utensilList,
+                origem: 'PDF'
+            };
+        }
+
+        function parseUtensilBlocks(text) {
+            const fields = [
+                { key: 'type', label: 'Type' },
+                { key: 'quantity', label: 'Quantity' },
+                { key: 'designation', label: 'Designation' },
+                { key: 'dimensions', label: 'Dimensions\\s*\\(W\\s*x\\s*L\\s*x\\s*H\\)' },
+                { key: 'material', label: 'Material' },
+                { key: 'temperatureSensitive', label: 'Temperature Sensitive' },
+                { key: 'washingNeeds', label: 'Washing Needs Quantity' },
+                { key: 'dirtType', label: 'Dirty Type' },
+                { key: 'needsTesting', label: 'Needs Testing' },
+                { key: 'washingObjective', label: 'Washing Objective' },
+                { key: 'dryingNeeds', label: 'Drying Needs' }
+            ];
+            // Longest labels first so "Dirty Type" / "Washing Needs Quantity" win over "Type" / "Quantity"
+            const labelRegex = new RegExp(
+                `(${[...fields].sort((a, b) => b.label.length - a.label.length).map(f => f.label).join('|')})\\s*:`,
+                'gi'
+            );
+
+            const blocks = text.split(/UTENSIL\s+(U\d+)\b/i);
+            const utensils = [];
+
+            for (let i = 1; i < blocks.length; i += 2) {
+                const id = blocks[i].toUpperCase();
+                const body = blocks[i + 1] || '';
+                const labels = [...body.matchAll(labelRegex)];
+                const utensil = { id };
+
+                labels.forEach((m, idx) => {
+                    const field = fields.find(f => new RegExp(`^${f.label}$`, 'i').test(m[1]));
+                    const valueStart = m.index + m[0].length;
+                    const valueEnd = idx + 1 < labels.length ? labels[idx + 1].index : body.length;
+                    if (field) utensil[field.key] = body.slice(valueStart, valueEnd).trim();
+                });
+
+                utensil.quantity = parseInt(utensil.quantity, 10) || 0;
+                utensils.push(utensil);
+            }
+
+            return utensils;
         }
 
         // ===================== DEMO DATA =====================
@@ -2413,6 +2673,44 @@
 
             saveToStorage();
             renderDashboard();
+        }
+
+        // ===================== GOOGLE SHEETS (BD Cards) =====================
+        // URL da Aplicação Web do Apps Script (apps-script/Code.gs). Vazio = sincronização desligada.
+        const SHEETS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbzywGamHqDiVQj6pXYBKORFIO7WYxJOP9o0JGhQhJJg6NX5CvcKIxSC9bpCB3Z6rQiz/exec';
+
+        function findCardSection(id) {
+            for (const zone of ZONES) {
+                for (const sub of getZoneSubSections(zone)) {
+                    if ((dashboardData[zone][sub] || []).some(c => c.id === id)) return sub;
+                }
+            }
+            return '';
+        }
+
+        function syncCardToSheet(card, action) {
+            if (!SHEETS_WEBAPP_URL || !card) return;
+
+            const { utensiliosDetalhe, ...data } = card.data || {};
+            const payload = {
+                ...data,
+                utensiliosDetalhe: utensiliosDetalhe || '',
+                id: card.id,
+                createdAt: card.createdAt,
+                action,
+                zone: card.zone,
+                section: findCardSection(card.id),
+                status: (STATUSES[card.status] || {}).label || card.status,
+                numImagens: (card.images || []).length
+            };
+
+            // text/plain evita o preflight CORS; no-cors porque o Apps Script redireciona
+            fetch(SHEETS_WEBAPP_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(payload)
+            }).catch(err => console.error('Erro ao sincronizar com Google Sheets:', err));
         }
 
         // ===================== STORAGE =====================
